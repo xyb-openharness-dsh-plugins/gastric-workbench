@@ -1,0 +1,18 @@
+{
+  "packageName": "@xyb-community/gastric-workbench",
+  "title": "小胃宝 Stompal 胃部瘤患者工作台",
+  "repository": "https://github.com/xyb-community/gastric-workbench",
+  "description": "本机优先的胃癌HER2/PD-L1/CLDN18.2标志物整理、胃切除后营养与进食、治疗历程与复诊准备工作台",
+  "slug": "gastric",
+  "targetUsers": "胃癌（腺癌为主）患者及照护者；胃部瘤语境以小胃宝既有品牌为准",
+  "scenario": "刚确诊面对HER2/PD-L1 CPS/MSI/CLDN18.2多个标志物报告；全胃或部分胃切除后倾倒综合征与长期营养补充管理；腹膜转移患者的腹腔治疗路径沟通；复诊与营养指标随访",
+  "completion": "得到来源可追溯、可核对的个人病程档案：标志物档案、胃切除方式与营养记录、治疗历程、体重与营养趋势、复诊准备材料；所有候选信息经用户核对入档，不提供诊断与治疗建议",
+  "coreFlow": [
+    "选择本机资料目录并导入病理/影像/检验报告",
+    "核对候选信息，建立标志物与分期档案",
+    "记录切除方式、进食与营养补充情况",
+    "按治疗线整理方案、周期与营养趋势",
+    "生成复诊准备材料"
+  ],
+  "layoutMode": "business-first"
+}
