@@ -806,7 +806,9 @@ const PAGE_CONTEXT = {
   nutrition: () => ({ facts: P().resection ? [`切除方式：${P().resection.rows[0][1]}（${P().resection.rows[0][0]} 手术）`] : ['本档案尚未手术'], missing: P().supplements.length ? ['补充剂复查的具体日期'] : ['营养门诊记录'] }),
   labs: () => ({ facts: Object.values(M()).filter(m => m.points && m.points.length).map(m => `${m.name} 最近：${String(m.points.slice(-1)[0].v)}（${m.points.slice(-1)[0].d}）`), missing: ['CLDN18.2 检测结果（A 档案未查、B 档案在检）'] }),
   timeline: () => ({ facts: ['一图秀当前勾选：' + state.sel.map(k => M()[k].name).join('、')], missing: [] }),
-  nutrition: () => ({ facts: [`体重最近：${M().wt.points.slice(-1)[0].v} kg（${M().wt.points.slice(-1)[0].d}）`], missing: ['营养科随诊记录'] }),
+  /* 这里原本还有一个 nutrition 键（后一个覆盖前一个，导致本页提示词只剩体重一项）。
+     已删除重复项：nutrition 的完整上下文（切除方式 + 补充剂）在上面已定义，
+     与开发版 public/app.js 保持一致。 */
   mind: () => ({ facts: ['本页内容默认私密，提示词不携带具体感受原文'], missing: [] }),
   review: () => ({ facts: P().rhythm.map(r => `${r[0]}：${r[1]}（${r[2]}）`), missing: ['想问清单中 1 条待确认'] }),
   trials: () => ({ facts: ['2026 线索共 ' + TRIALS.length + ' 条（真实登记摘录，状态未核实）'], missing: [] })
