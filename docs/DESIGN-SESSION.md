@@ -28,3 +28,5 @@ HTML原型关口：路径/版本/hash、实际预览证据、用户确认范围/
 - **D3（产品决定，待 G1 签认）**：第一决策点=四标志物（HER2/PD-L1 CPS/MSI/CLDN18.2）+切除范围；专属一级模块=「进食与营养」（营养支持并入，不设双入口）；一图秀默认指标=体重。
 - **D4（用户要求）**：沿用既有 Stompal 小胃宝 Logo（橙）。
 - 未决：CA19-9 Lewis 阴性标注是字段还是提示卡（倾向提示卡+医生原话位）。
+
+- **D9（用户确认后执行，2026-10-18）**：仓库纳管 —— `github.com/xyb-openharness-dsh-plugins/gastric-workbench`（private、MIT、main 分支，SSH samqin123）；`package.json` repository 字段由 `xyb-community/*` 占位改为 org 实址，license 由 UNLICENSED 改为 MIT 与 LICENSE 文件对齐；README 参照 xyb-workbench 体例新写（致谢小x宝社区志愿者 sam）。git 推送 ≠ 市场投稿，将来若需 public 另行授权。
