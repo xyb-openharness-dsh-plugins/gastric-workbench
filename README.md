@@ -13,7 +13,7 @@
 
 - **开发版已落地**：SPEC v0.1（`docs/SPEC.md`）、交互原型 v0.2（`prototypes/v0.2/`，10 个一级页）、2026 临床试验资料包 236 条（`docs/CLINICAL-DATA-2026.md`）、schema 冻结（`schema/freeze-contract.md`）、开发版 `public/ + dsh/`（`npm run check` 全绿，21 项测试含原型↔开发版逐字段 parity）。
 - 执行依据与硬约束清单：`docs/DEV-REQUIREMENTS-2026-10-21.md`（H1–H20 + 胃癌专属 G-A1–G-A9，承自肠癌样板的踩坑记录）。
-- **尚未做**：DSH Desktop 实机装机验证（V2：打 tar → `~/.dsh/profiles/desktop` → 人工确认）；`dsh/index.js` 走标准分栏（customFrame=false），与肠癌样板一致。
+- **尚未做**：DSH Desktop 实机装机验证（V2：打 tar → 装到 Desktop 自己的 Harness profile（本机 `~/Library/Application Support/dsh-desktop/harness/profiles/web`，用 `node scripts/check-install.mjs` 判定，**不是** `~/.dsh`）→ 重启 Harness → 人工确认）；`dsh/index.js` 走标准分栏（customFrame=false），与肠癌样板一致。
 - 演示数据 2 档案（李先生 ⅡB / 赵女士 Ⅳ 期腹膜）× 6 个月窗，唯一来源 `demo/build-demo-data.mjs`。
 
 ## 产品范围（一期规划）

@@ -1,5 +1,12 @@
 # 变更记录
 
+## 2026-10-21 · 装机目标更正（V2 前的准备）
+
+- **更正**：装机目录不是 `~/.dsh/profiles/desktop`（CLI 侧，Desktop 不读）。DSH Desktop 0.12.0 实际加载的是 app 自己的 Harness `~/Library/Application Support/dsh-desktop/harness/profiles/web`。
+- `scripts/check-install.mjs` 换成自动探测版（Desktop Harness → `DSH_HOME` → `~/.dsh`，打印判定依据，区分市场安装/手工安装）；`docs/DEV-REQUIREMENTS-2026-10-21.md` H13 与 README V2 段同步更正。
+- `scripts/build-version.mjs --check` 不再比较 `build` / `commit`（易变量），修掉每次提交后必失败的假阴性。
+
+
 ## 2026-10-21 · 开发版 v0.1.0（胃癌全链路）
 
 - 完成 2026 临床试验资料包：236 条（223 病种特异 + 13 篮式，119 条含中国中心），采集脚本随仓库版本化（`scripts/fetch-gastric-trials-2026.mjs`）；资料包与口径见 `docs/CLINICAL-DATA-2026.md`。

@@ -77,7 +77,9 @@ if (checkOnly) {
     console.error('✗ 缺少 lib/version.js，请先运行 npm run build:version')
     process.exit(1)
   }
-  if (readFileSync(target, 'utf8') !== generated) {
+  // build / commit 是随提交变化的易变量：提交后必然与 HEAD 不同，比较全文会让 check 在每次提交后必失败（2026-10-21 修正）。只比较稳定字段。
+  const stable = (text) => text.replace(/^export const (build|commit) = '.*'$/gm, '')
+  if (stable(readFileSync(target, 'utf8')) !== stable(generated)) {
     console.error('✗ lib/version.js 与 VERSION 不同步，请运行 npm run build:version')
     process.exit(1)
   }
