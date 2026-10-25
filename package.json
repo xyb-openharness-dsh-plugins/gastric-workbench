@@ -33,6 +33,7 @@
     "test": "node --disable-warning=ExperimentalWarning --test test/*.test.mjs",
     "check": "node scripts/build-version.mjs --check && node scripts/check-syntax.mjs && node scripts/check-schema.mjs && node scripts/check-wording.mjs && node --disable-warning=ExperimentalWarning --test test/*.test.mjs && node scripts/check-version.mjs && node scripts/check-workbench-package.mjs .",
     "pack:check": "npm pack --dry-run",
+    "probe:primer": "node scripts/probe-disease-primer.mjs",
     "check:install": "node scripts/check-install.mjs"
   },
   "dsh": {
