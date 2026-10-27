@@ -1,6 +1,6 @@
 {
   "name": "@xyb-community/gastric-workbench",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "小胃宝 Stompal：本机优先的胃癌标志物档案、进食与营养（切除/倾倒/补充剂）、腹膜与腹腔治疗留痕、复诊准备工作台",
   "private": true,
   "type": "module",
@@ -31,7 +31,7 @@
     "check:wording": "node scripts/check-wording.mjs",
     "check:package": "node scripts/check-workbench-package.mjs .",
     "test": "node --disable-warning=ExperimentalWarning --test test/*.test.mjs",
-    "check": "node scripts/build-version.mjs --check && node scripts/check-syntax.mjs && node scripts/check-schema.mjs && node scripts/check-wording.mjs && node --disable-warning=ExperimentalWarning --test test/*.test.mjs && node scripts/check-version.mjs && node scripts/check-workbench-package.mjs .",
+    "check": "node scripts/build-version.mjs --check && node scripts/check-syntax.mjs && node scripts/check-schema.mjs && node scripts/check-wording.mjs && node --disable-warning=ExperimentalWarning --test test/*.test.mjs && node scripts/check-version.mjs && node scripts/check-workbench-package.mjs . && node scripts/check-primer-links.mjs",
     "pack:check": "npm pack --dry-run",
     "probe:primer": "node scripts/probe-disease-primer.mjs",
     "check:install": "node scripts/check-install.mjs"

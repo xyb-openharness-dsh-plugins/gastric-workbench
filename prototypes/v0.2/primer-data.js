@@ -11,7 +11,7 @@ window.DISEASE_PRIMER = {
   brand: '小胃宝 Stompal',
   name: '胃癌',
   en: 'Gastric Cancer',
-  updated: '2026-10-25',
+  updated: '2026-10-27',
   sections: [
     {
       id: 'definition',
@@ -26,8 +26,8 @@ window.DISEASE_PRIMER = {
         '腹膜转移与腹腔治疗在本台单列，不与肝转移、淋巴结转移合并成一条。'
       ],
       sources: [
-        { org: 'WHO', doc: 'Classification of Tumours: Digestive System Tumours', version: '版本未核实', original: false, page: '页码待核' },
-        { org: 'AJCC', doc: 'Cancer Staging Manual（胃章节）', version: '版本未核实', original: false, page: '页码待核' }
+        { org: 'WHO', doc: 'Classification of Tumours: Digestive System Tumours', version: '版本未核实', original: false, page: '页码待核', secondaryUrl: 'https://publications.iarc.fr/Book-And-Report-Series/Who-Classification-Of-Tumours/Digestive-System-Tumours-2019' },
+        { org: 'AJCC', doc: 'Cancer Staging Manual（胃章节）', version: '版本未核实', original: false, page: '页码待核', secondaryUrl: 'https://www.facs.org/quality-programs/cancer-programs/american-joint-committee-on-cancer/cancer-staging-systems/' }
       ]
     },
     {
@@ -38,11 +38,21 @@ window.DISEASE_PRIMER = {
       table: {
         head: ['机构', '文件', '版本 / 年份', '原件', '本台的用途'],
         rows: [
-          ['NCCN', 'NCCN Guidelines · Gastric Cancer', '2026 年版（版本号与更新状态未核验）', '未取得原件', '分期检查与治疗路径的并列引用；本轮不引用具体条文'],
-          ['CSCO', 'CSCO 胃癌诊疗指南', '2026 年版（版本号与更新状态未核验）', '未取得原件', '国内可及药物与本土实践差异；本轮不引用具体条文'],
-          ['ESMO', 'ESMO Gastric Cancer Guidelines', '2026 更新状态未核验', '未取得原件', '仅登记其存在，不作引用依据'],
-          ['AJCC', 'Cancer Staging Manual（胃章节）', '版本未核实', '未取得原件', 'TNM 分期口径；与国内分期并存时两行并列、不换算'],
-          ['WHO', 'Digestive System Tumours', '版本未核实', '未取得原件', '病理类型命名的唯一口径']
+          ['NCCN', 'NCCN Guidelines · Gastric Cancer', '2026 年版（版本号与更新状态未核验）',
+            { text: '未取得原件', url: 'https://www.nccn.org/guidelines/guidelines-detail?category=1&id=1434' },
+            '分期检查与治疗路径的并列引用；本轮不引用具体条文'],
+          ['CSCO', 'CSCO 胃癌诊疗指南', '2026 年版（版本号与更新状态未核验）',
+            { text: '未取得原件（官网指南浏览需会员登录）', nolink: true, note: 'CSCO 指南浏览需会员登录（官网指南页为空壳、跳转 meeting.csco.org.cn 会员入口），官网无公开 2026 版 PDF' },
+            '国内可及药物与本土实践差异；本轮不引用具体条文'],
+          ['ESMO', 'ESMO Gastric Cancer Guidelines', '2026 更新状态未核验',
+            { text: '未取得原件', url: 'https://www.esmo.org/guidelines/esmo-clinical-practice-guideline-gastric-and-oesophageal-cancer' },
+            '仅登记其存在，不作引用依据'],
+          ['AJCC', 'Cancer Staging Manual（胃章节）', '版本未核实',
+            { text: '未取得原件', url: 'https://www.facs.org/quality-programs/cancer-programs/american-joint-committee-on-cancer/cancer-staging-systems/' },
+            'TNM 分期口径；与国内分期并存时两行并列、不换算'],
+          ['WHO', 'Digestive System Tumours', '版本未核实',
+            { text: '未取得原件', url: 'https://publications.iarc.fr/Book-And-Report-Series/Who-Classification-Of-Tumours/Digestive-System-Tumours-2019' },
+            '病理类型命名的唯一口径']
         ]
       },
       points: [
@@ -52,11 +62,11 @@ window.DISEASE_PRIMER = {
         'NCCN、CSCO、ESMO 的来源地区与适用边界不同，本台并列列出，不做取舍、不做换算。'
       ],
       sources: [
-        { org: 'NCCN', doc: 'NCCN Guidelines · Gastric Cancer', version: '2026 年版（未核验）', original: false, page: '页码待核' },
-        { org: 'CSCO', doc: 'CSCO 胃癌诊疗指南', version: '2026 年版（未核验）', original: false, page: '页码待核' },
-        { org: 'ESMO', doc: 'ESMO Gastric Cancer Guidelines', version: '2026 更新状态未核验', original: false, page: '页码待核' },
-        { org: 'AJCC', doc: 'Cancer Staging Manual（胃章节）', version: '版本未核实', original: false, page: '页码待核' },
-        { org: 'WHO', doc: 'Digestive System Tumours', version: '版本未核实', original: false, page: '页码待核' }
+        { org: 'NCCN', doc: 'NCCN Guidelines · Gastric Cancer', version: '2026 年版（未核验）', original: false, page: '页码待核', secondaryUrl: 'https://www.nccn.org/guidelines/guidelines-detail?category=1&id=1434' },
+        { org: 'CSCO', doc: 'CSCO 胃癌诊疗指南', version: '2026 年版（未核验）', original: false, page: '页码待核', nolink: true, note: 'CSCO 指南浏览需会员登录，官网无公开 2026 版 PDF' },
+        { org: 'ESMO', doc: 'ESMO Gastric Cancer Guidelines', version: '2026 更新状态未核验', original: false, page: '页码待核', secondaryUrl: 'https://www.esmo.org/guidelines/esmo-clinical-practice-guideline-gastric-and-oesophageal-cancer' },
+        { org: 'AJCC', doc: 'Cancer Staging Manual（胃章节）', version: '版本未核实', original: false, page: '页码待核', secondaryUrl: 'https://www.facs.org/quality-programs/cancer-programs/american-joint-committee-on-cancer/cancer-staging-systems/' },
+        { org: 'WHO', doc: 'Digestive System Tumours', version: '版本未核实', original: false, page: '页码待核', secondaryUrl: 'https://publications.iarc.fr/Book-And-Report-Series/Who-Classification-Of-Tumours/Digestive-System-Tumours-2019' }
       ]
     },
     {
@@ -98,8 +108,8 @@ window.DISEASE_PRIMER = {
         '以上是文献与指南里列出的手段，按病期与线序排列，不代表任何一项适合你。选哪一个，这一句需要问你的医生。'
       ],
       sources: [
-        { org: 'NCCN', doc: 'NCCN Guidelines · Gastric Cancer', version: '2026 年版（未核验）', original: false, page: '页码待核' },
-        { org: 'CSCO', doc: 'CSCO 胃癌诊疗指南', version: '2026 年版（未核验）', original: false, page: '页码待核' }
+        { org: 'NCCN', doc: 'NCCN Guidelines · Gastric Cancer', version: '2026 年版（未核验）', original: false, page: '页码待核', secondaryUrl: 'https://www.nccn.org/guidelines/guidelines-detail?category=1&id=1434' },
+        { org: 'CSCO', doc: 'CSCO 胃癌诊疗指南', version: '2026 年版（未核验）', original: false, page: '页码待核', nolink: true, note: 'CSCO 指南浏览需会员登录，官网无公开 2026 版 PDF' }
       ]
     },
     {
@@ -113,9 +123,9 @@ window.DISEASE_PRIMER = {
         '同一资料包的关键词近似命中数（同一研究可多命中，不是人工分类）：HER2 43、围手术期 71、辅助 57、PD-L1/PD-1 31、细胞治疗 21、CLDN18.2 18、腹膜转移 13、MSI/dMMR 12、腹腔灌注 10、ADC 5、CAR-T 5。'
       ],
       sources: [
-        { org: 'ClinicalTrials.gov', doc: '2026 年胃癌 / GEJ 干预性研究登记资料包（trials-2026.jsonl）', version: '检索日 2026-10（首次公示 2026-01-01 起）', original: true, note: '一手登记数据，本项目自采；ChinaDrugTrials 与 ChiCTR 未采集' },
-        { org: 'NCCN', doc: 'NCCN Guidelines · Gastric Cancer', version: '2026 年版（未核验）', original: false, page: '页码待核' },
-        { org: 'CSCO', doc: 'CSCO 胃癌诊疗指南', version: '2026 年版（未核验）', original: false, page: '页码待核' }
+        { org: 'ClinicalTrials.gov', doc: '2026 年胃癌 / GEJ 干预性研究登记资料包（trials-2026.jsonl）', version: '检索日 2026-10（首次公示 2026-01-01 起）', original: true, nolink: true, note: '一手登记数据，本项目自采快照；第三方原件未存档，无公开可点 URL。ChinaDrugTrials 与 ChiCTR 未采集' },
+        { org: 'NCCN', doc: 'NCCN Guidelines · Gastric Cancer', version: '2026 年版（未核验）', original: false, page: '页码待核', secondaryUrl: 'https://www.nccn.org/guidelines/guidelines-detail?category=1&id=1434' },
+        { org: 'CSCO', doc: 'CSCO 胃癌诊疗指南', version: '2026 年版（未核验）', original: false, page: '页码待核', nolink: true, note: 'CSCO 指南浏览需会员登录，官网无公开 2026 版 PDF' }
       ]
     }
   ]

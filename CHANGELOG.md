@@ -1,5 +1,13 @@
 # 变更记录
 
+## 2026-10-27 · 36 号 v2 补齐（指南可点+状态卡）v0.1.1
+
+- 模式层同步：`prototypes/v0.2/primer.{js,css}` 与 `public/primer.{js,css}` 覆盖为 starter 最新版（含 §2.5 链接渲染与 §4.3 排版对齐）；`scripts/probe-disease-primer.mjs` 升到 P1–P9。
+- 指南链接：evidence 表 5 行与全部 `original:false` 来源补齐二次链接 —— NCCN 指南页、ESMO 胃与食管癌 CPG 页、AJCC 分期系统页、WHO/IARC 消化系统肿瘤（第 5 版）页，逐条真浏览器验活 OK（4 个唯一 URL）。CSCO 指南需会员登录、官网无公开 2026 版 PDF，按 `nolink + note` 如实标注（5 处 nolink：CSCO ×4 + 趋势段自采登记快照 ×1）。
+- 看板状态卡：看板首卡补 §2.6 四件（卡头 eyebrow / 大字天数 / 现状行 / 出口按钮排）；本档案没有锚点日，天数显示「待初始化」并指向三步初始化，不手填、不倒推。
+- `public/` 补齐 primer 三件套并接线（顶栏「?」+ 数据/样式/模块）；`scripts/check-primer-links.mjs` 纳入 `npm run check`，并断言 public 三件套与活动原型同源。
+- 验证：链接断言 17 项、24 通过、0 失败；探针 P1–P9+E0 在原型与开发版各 10/10 PASS；`npm run check` 退出码 0。
+
 ## 2026-10-21 · 装机目标更正（V2 前的准备）
 
 - **更正**：装机目录不是 `~/.dsh/profiles/desktop`（CLI 侧，Desktop 不读）。DSH Desktop 0.12.0 实际加载的是 app 自己的 Harness `~/Library/Application Support/dsh-desktop/harness/profiles/web`。

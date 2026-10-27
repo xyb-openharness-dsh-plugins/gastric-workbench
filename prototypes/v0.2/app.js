@@ -328,6 +328,23 @@ function vDashboard() {
   const p = P(), m = M();
   const next = p.rhythm[0];
   const alertNext = `<div class="alert-strip"><div><b>下一次节点：${esc(next[0])}</b><p>${esc(next[3])}</p></div><button class="soft" data-action="go-review">看复诊节奏</button></div>`;
+  /* 病程状态卡（36 号 §2.6 四件）：卡头 eyebrow / 锚点派生大字天数 / 现状行 / 出口按钮排。
+     本档案没有记录锚点日（手术日 Day 0 或诱导 D1），天数一律显示「待初始化」——
+     不手填、不拿确诊日或手术日倒推；有锚点后由锚点日计算，三步初始化见设置。 */
+  const curLine = p.lines[p.lines.length - 1];
+  const activeCycle = (p.cycles || []).find(c => !c[4]);
+  const statusText = activeCycle ? `${activeCycle[3]}（${activeCycle[0]}）` : '已结束';
+  const nextAt = next[3] ? next[3].replace(/^下次：/, '') : '待安排';
+  const stageCard = `<div class="stage-card">
+    <div class="stage-card-head"><span class="eyebrow">D+? 状态卡 · 距下一节点待初始化</span>${pill('待初始化', 'grey')}</div>
+    <div class="stage-day"><b>待初始化</b><span>尚无锚点日（手术日 Day 0 / 诱导 D1）</span></div>
+    <p class="stage-line"><b>${esc(p.stage)}</b> · ${esc(curLine.name)} · ${esc(statusText)} · 下次：${esc(nextAt)}（${esc(next[0])}）</p>
+    <div class="actions">
+      <button class="primary" data-action="go-treatment">看治疗周期（按天）→</button>
+      <button class="soft" data-primer-open aria-haspopup="dialog" aria-label="疾病概要：胃癌是什么？">疾病概要：胃癌是什么？</button>
+    </div>
+    <p class="small-note">天数应由锚点日自动派生；本档案尚未记录锚点日，因此整卡显示「待初始化」。三步初始化：①建立档案 → ②记录锚点日 → ③导入资料（入口：设置）。</p>
+  </div>`;
   const tasks = [];
   tasks.push(['nutrition', '记一笔今天的进食', '餐次 / 份量 / 症状，只记事实不给处理建议', 'go-nutrition']);
   tasks.push(['records', '报告看不懂？先理资料', '上传 → 解析 → 核对 → 入库，原件始终保留', 'go-records']);
@@ -339,8 +356,7 @@ function vDashboard() {
     ${p.rhythm.map(r => row(`<b>${r[0]}</b>`, `${r[1]} — ${r[2]}`, `<small>${esc(r[3])}</small>`)).join('')}
     <p class="small-note">以上为指南常见节奏摘录，仅供准备讨论；实际安排以你的医生为准。</p></div>`;
   const cards = (DASH_KEYS[state.profile] || []).filter(k => m[k]).map(k => mcard(k, m[k])).join('');
-  return `<div class="page-enter">${pageHead()}
-  <div class="hero"><div><span class="eyebrow">当前情况</span><h1>${esc(p.headline)}</h1><p>${esc(p.mindset)}</p>
+  return `<div class="page-enter">${pageHead()}${stageCard}<div class="hero"><div><span class="eyebrow">当前情况</span><h1>${esc(p.headline)}</h1><p>${esc(p.mindset)}</p>
     <div class="actions"><button class="primary" data-action="go-timeline">看病情一图秀</button><button class="soft" data-action="go-subtype">我的标志物档案</button><button class="soft hero-ai" data-action="agent-open">${icon('chat')}AI 对话</button></div></div>
     <div class="hero-mascot" aria-hidden="true"><span style="font-size:56px">🫂</span></div></div>
   ${alertNext}
@@ -968,6 +984,7 @@ document.addEventListener('click', (e) => {
     profiles: dlgProfiles, settings: dlgSettings, about: dlgAbout, help: dlgHelp,
     close: closeDialog, 'open-store': () => toast('资料目录已激活（演示）'),
     'go-review': () => { state.view = 'review'; location.hash = 'review'; render(); },
+    'go-treatment': () => { state.view = 'treatment'; location.hash = 'treatment'; render(); },
     'go-labs': () => { state.view = 'labs'; location.hash = 'labs'; render(); },
     'go-timeline': () => { state.view = 'timeline'; location.hash = 'timeline'; render(); },
     'go-subtype': () => { state.view = 'subtype'; location.hash = 'subtype'; render(); },
