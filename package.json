@@ -1,6 +1,6 @@
 {
   "name": "@xyb-community/gastric-workbench",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "小胃宝 Stompal：本机优先的胃癌标志物档案、进食与营养（切除/倾倒/补充剂）、腹膜与腹腔治疗留痕、复诊准备工作台",
   "private": true,
   "type": "module",
