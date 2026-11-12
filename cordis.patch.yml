@@ -1,3 +1,5 @@
 - insert:
     - id: gastric-main
       name: "@xyb-community/gastric-workbench"
+      config:
+        root: !!js dshHomePath('gastric-workbench')

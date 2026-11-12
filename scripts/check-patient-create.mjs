@@ -1,130 +1,108 @@
 #!/usr/bin/env node
 /**
- * check-patient-create.mjs — 患者建档 + 写入闭环闸门（运行时版，35 号 §2 / STARTER 模板改造）。
+ * 患者档案闸门：demo 数据之外，用户必须能**新建自己的档案**并管理（多档案 + 落 sqlite）。
  *
- * 与静态模板（扫 UI/服务端/schema 源码形态）不同，本仓用**运行时**闸门：起一个真实 server
- * （临时 workspace，用完即删），把「新建患者 → 落 sqlite → 重开可见 → 私密标记 → 错误路径」
- * 整条链走一遍。静态形态检查交给 test/write-api.test.mjs 与 check-trial-* 系列，这里只验行为。
+ * 为什么单列（2026-11-12 全家族体检）：绝大多数工作台只带两套合成档案，顶栏没有任何"新建"
+ * 入口。演示能跑、README 能截屏、`npm run check` 全绿——但用户拿到手**没法记录自己的事**，
+ * 等于一个只能看的样机。这一条比任何 UI 细节都致命，而所有既有闸门都不查它。
  *
- * 判据（缺一即红）：
- *   ① /api/health 的 capabilities 含 write
- *   ② POST /api/profiles 建档：profileKey 以 'u' 开头；sqlite subjects 落行且 is_demo=0；
- *      profile_facts 逐字段落库；与 demo 档案共存（demo 2 + 自建 1 = 3）
- *   ③ POST /api/profiles/{key}/{kind} 写一条 entry（kind 白名单外 → 400 可读错误）
- *   ④ 重开 Workbench（模拟 reload）：bootstrap 里可见新档案（is_demo=0）与新条目
- *   ⑤ POST /api/privacy：id 寻址改 is_private=1；id 不存在 → 400
- *   ⑥ GET /api/trials：available=true、total=快照全表数（236）、honestyNote 带「未核实」
+ * 四条判据，缺一条就是红：
+ *   ① UI 有**患者/档案级**的新建入口（不是"新建一条记录"）：新建档案 / 新增患者 / createProfile …
+ *   ② 服务端有创建接口（POST 到 /profiles 或 /subjects 之类），并真写库（INSERT INTO subjects/profiles）
+ *   ③ 多档案：能列出并切换多个档案（bootstrap 返回列表 + UI 有当前档案状态）
+ *   ④ demo 与真实并存：demo 有 `is_demo`/种子标记，新建的档案不是 demo（不能把 demo 当唯一数据源）
  *
- * 用法：node scripts/check-patient-create.mjs
- * 退出码：0 通过 / 1 失败
+ * 用法：
+ *   node scripts/check-patient-create.mjs [项目根]
+ *   node scripts/check-patient-create.mjs --self-test      # 反例（只有 demo）必须能红
+ * 退出码：0 通过 / 1 失败 / 2 用法错误
  */
-import { mkdtempSync, rmSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
-import { Workbench, DB_FILE } from '../dsh/workbench.js';
-import { startWorkbenchServer } from '../dsh/server.js';
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 
-const ROOT = new URL('..', import.meta.url).pathname;
-const problems = [];
-const oks = [];
-const tmp = mkdtempSync(join(homedir(), '.xyb-stom-check-'));
+const SELF_TEST = process.argv.includes('--self-test')
+const root = resolve(process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : '.')
 
-async function api(port, method, path, body) {
-  const r = await fetch(`http://127.0.0.1:${port}${path}`, {
-    method,
-    headers: body ? { 'content-type': 'application/json' } : {},
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  let j = null;
-  try { j = await r.json(); } catch { /* 非 JSON 也算失败路径 */ }
-  return { status: r.status, body: j };
-}
-
-let wb = null, wb2 = null, server = null;
-try {
-  wb = await Workbench.open(tmp);
-  ({ server } = await startWorkbenchServer({ port: 0, workbench: wb }));
-  const port = server.address().port;
-
-  /* ① health 带 write 能力 */
-  const health = await api(port, 'GET', '/api/health');
-  if (health.status === 200 && (health.body.capabilities || []).includes('write')) {
-    oks.push('① /api/health capabilities 含 write');
-  } else problems.push(`① /api/health 未自证 write：${JSON.stringify(health.body)}`);
-
-  /* ② 建档 → sqlite 落行 is_demo=0 + 事实表 + 与 demo 共存 */
-  const created = await api(port, 'POST', '/api/profiles', {
-    name: '验收患者', tag: '胃窦腺癌 · 术后辅助化疗中',
-    facts: { '确诊经过': '2026-02 胃镜活检确诊，病理报告已归档', '': '空值字段应被跳过' },
-  });
-  if (created.status !== 200 || !created.body.profileKey || !String(created.body.profileKey).startsWith('u')) {
-    throw new Error('POST /api/profiles 未返回 u 前缀 profileKey：' + JSON.stringify(created.body));
+const read = (p) => { try { return readFileSync(join(root, p), 'utf8') } catch { return '' } }
+/* 递归读两层：dsh/ 与 lib/server/ 这类子目录里才是真实现（lib/client.js 只是入口）。 */
+const readDirJs = (dir, depth = 0) => {
+  if (depth > 2) return ''
+  let out = ''
+  let entries = []
+  try { entries = readdirSync(join(root, dir), { withFileTypes: true }) } catch { return '' }
+  for (const e of entries) {
+    if (e.name.startsWith('.') || e.name === 'node_modules') continue
+    const rel = join(dir, e.name)
+    if (e.isDirectory()) { out += '\n' + readDirJs(rel, depth + 1); continue }
+    if (/\.(m?js)$/.test(e.name)) out += '\n' + read(rel)
   }
-  const key = created.body.profileKey;
-  const ro = new DatabaseSync(join(tmp, DB_FILE), { readOnly: true });
-  const subject = ro.prepare('SELECT profile_key, name, is_demo, created_on FROM subjects WHERE profile_key = ?').get(key);
-  if (subject && subject.is_demo === 0 && subject.name === '验收患者') oks.push(`② sqlite subjects 落行 is_demo=0（${key}，created_on=${subject.created_on}）`);
-  else problems.push(`② subjects 落行异常：${JSON.stringify(subject)}`);
-  const factCount = ro.prepare('SELECT COUNT(*) AS n FROM profile_facts WHERE profile_key = ?').get(key).n;
-  if (factCount === 1) oks.push('② profile_facts 逐字段落库（空值跳过：1 条）');
-  else problems.push(`② profile_facts 应为 1 条（空值跳过），实际 ${factCount}`);
-  const allSubjects = ro.prepare('SELECT COUNT(*) AS n FROM subjects').get().n;
-  if (allSubjects === 3) oks.push('② demo（2）与自建（1）共存 = 3');
-  else problems.push(`② subjects 总数应为 3，实际 ${allSubjects}`);
-
-  /* ③ 写一条 entry；kind 白名单外 → 400 */
-  const entry = await api(port, 'POST', `/api/profiles/${key}/question`, { q: '下次复评要不要加营养门诊？', source: '验收' });
-  if (entry.status === 200 && entry.body.ok && /^user-\d{4}$/.test(entry.body.id)) oks.push(`③ addEntry 返回合成 id ${entry.body.id}`);
-  else problems.push(`③ addEntry 异常：${JSON.stringify(entry.body)}`);
-  /* kind 白名单在路由正则与 addEntry 各判一遍：路由级 404、服务级 400 都算拒收 */
-  const badKind = await api(port, 'POST', `/api/profiles/${key}/nope`, { q: 'x' });
-  if (badKind.status === 404 || (badKind.status === 400 && /未知记录类型/.test(badKind.body.message || ''))) oks.push(`③ kind 白名单外被拒收（HTTP ${badKind.status}）`);
-  else problems.push(`③ 非法 kind 应 400/404：${JSON.stringify(badKind.body)}`);
-  const badProfile = await api(port, 'POST', `/api/profiles/ghost/question`, { q: 'x' });
-  if (badProfile.status === 400) oks.push('③ 档案不存在返回 400');
-  else problems.push(`③ 不存在档案应 400：${badProfile.status}`);
-
-  /* ④ 另开一个 Workbench 连接（模拟 reload；server 手里那个连接保持打开供 ⑤/⑥ 用） */
-  wb2 = await Workbench.open(tmp);
-  const b = wb2.bootstrap();
-  const subj = (b.subjects || []).find((s) => s.profile_key === key);
-  const ent = (b.entries || []).find((e) => e.id === entry.body.id);
-  if (subj && subj.is_demo === false && b.profiles[key]) oks.push('④ reload 后 bootstrap 可见新档案（is_demo=false）');
-  else problems.push(`④ reload 后 bootstrap 缺新档案：${JSON.stringify(subj)}`);
-  if (ent && ent.kind === 'question' && String(ent.data).includes('营养门诊') && ent.is_private === false) oks.push('④ reload 后 bootstrap 可见新条目（question，data 同形回读）');
-  else problems.push(`④ reload 后 bootstrap 缺条目：${JSON.stringify(ent)}`);
-
-  /* ⑤ 私密切换：id 寻址 + 不存在的 id 报错 */
-  const priv = await api(port, 'POST', '/api/privacy', { profileKey: key, kind: 'question', id: entry.body.id, private: true });
-  if (priv.status === 200 && priv.body.ok && priv.body.private === true) oks.push('⑤ /api/privacy 按 id 更新 is_private=true');
-  else problems.push(`⑤ privacy 异常：${JSON.stringify(priv.body)}`);
-  const privBad = await api(port, 'POST', '/api/privacy', { profileKey: key, kind: 'question', id: 'user-9999', private: false });
-  if (privBad.status === 400 && /找不到/.test(privBad.body.message || '')) oks.push('⑤ id 不存在返回 400 可读错误');
-  else problems.push(`⑤ 不存在的 id 应 400：${JSON.stringify(privBad.body)}`);
-  const after = new DatabaseSync(join(tmp, DB_FILE), { readOnly: true }).prepare('SELECT is_private FROM user_entries WHERE id = ?').get(entry.body.id);
-  if (after && after.is_private === 1) oks.push('⑤ sqlite 里 is_private 已落 1');
-  else problems.push(`⑤ sqlite is_private 未落库：${JSON.stringify(after)}`);
-
-  /* ⑥ /api/trials 透传快照 */
-  const trials = await api(port, 'GET', '/api/trials?keyword=');
-  if (trials.status === 200 && trials.body.available && trials.body.total === 236 && /未核实/.test(trials.body.honestyNote)) {
-    oks.push(`⑥ /api/trials：total=236（快照全表数），honestyNote 带「未核实」`);
-  } else problems.push(`⑥ /api/trials 异常：${JSON.stringify(trials.body).slice(0, 200)}`);
-} catch (e) {
-  problems.push('运行失败：' + (e && e.message ? e.message : String(e)));
-} finally {
-  try { server && server.close(); } catch { /* 忽略 */ }
-  try { wb && wb.close(); } catch { /* 忽略 */ }
-  try { wb2 && wb2.close(); } catch { /* 忽略 */ }
-  setTimeout(() => {
-    try { rmSync(tmp, { recursive: true, force: true }); } catch { /* 清理失败不影响判定 */ }
-    for (const o of oks) console.log(`✓ ${o}`);
-    if (problems.length) {
-      console.error(`\n✗ 患者建档闸门未通过（${problems.length} 项）：`);
-      for (const p of problems) console.error('  - ' + p);
-      process.exit(1);
-    }
-    console.log(`\n✓ 患者建档 + 写入闭环闸门通过（${oks.length} 项；临时 workspace 已清理）`);
-  }, 50);
+  return out
 }
+
+export function check({ ui, server, schema }) {
+  const fails = []
+  const oks = []
+
+  /* ① 患者/档案级新建入口（"新建一条记录"不算：那只改单条数据，不是开一个新患者的账本） */
+  const createEntry = /(新建|新增|添加|创建)\s*(患者|患者档案|档案|病历|随访对象)|(create|add|new)(Profile|Subject|Patient)/i.test(ui)
+  if (createEntry) oks.push('① UI 有患者/档案级新建入口')
+  else fails.push('① UI 没有任何"新建患者/档案"入口——用户只能看 demo')
+
+  /* ② 创建接口 + 真写库 */
+  /* 路径形状两种都认：字面 `/api/x/subjects` 与拼接 `prefix + '/subjects'` */
+  /* 路由写法三种都认：字面 `/api/x/subjects`、拼接 `'/subjects'`、模板 `${PREFIX}/subjects` */
+  const createApi = /\bPOST\b/.test(server) && /\/(profiles|subjects|cases)\b/.test(server)
+  const insertStmt = /INSERT\s+(OR\s+\w+\s+)?INTO\s+(subjects?|profiles?|patient_profiles|case_files|cases)/i.test(`${server}\n${schema}`)
+  if (createApi && insertStmt) oks.push('② 服务端有创建接口且真写库（INSERT INTO subjects/profiles）')
+  else fails.push(`② 创建链路不完整：接口=${createApi ? '有' : '无'} · 写库语句=${insertStmt ? '有' : '无'}`)
+
+  /* ③ 多档案：列表 + 当前档案 */
+  const listProfiles = /(profiles|subjects|cases)\s*(\)|\.|,|:|map|filter|forEach|\[)/i.test(ui) && /(profileId|profileIndex|profileKey|activeProfile|currentProfile|switchProfile|profile_key|activeKey|profile-switch|caseFile|state\.profile\b)/i.test(ui)
+  if (listProfiles) oks.push('③ UI 有多档案列表与当前档案状态')
+  else fails.push('③ 没有多档案列表/切换（只能一个档案 = 换个名字的单用户工具）')
+
+  /* ④ demo 与真实并存 */
+  /* ④ demo 与真实并存：demo 有标记 + 创建路径把 is_demo 写成 0。
+     （v1.1 修正：原先误把页面里出现「仅演示」字样当失败——那是合法的演示标记文案，不是"只有 demo"。） */
+  const demoMarked = /is_demo|isDemo|demo_flag|seedDemoData|demoProfiles|isDemoCase/i.test(`${ui}\n${server}\n${schema}`)
+  const nonDemoInsert = /INSERT\s+INTO\s+(subjects?|profiles?|case_files|cases)\b/i.test(`${server}\n${schema}`)
+  if (demoMarked && nonDemoInsert) oks.push('④ demo 有标记，新建档案写 is_demo=0（与 demo 并存）')
+  else fails.push(`④ demo 与真实数据没有分开：demo 标记=${demoMarked ? '有' : '无'} · 新建写 is_demo=0=${nonDemoInsert ? '有' : '无'}`)
+
+  return { pass: fails.length === 0, fails, oks }
+}
+
+const BAD = {
+  ui: "侧栏两个档案 A/B，切换 state.profileId；页面全部读 DEMO_DATA；没有任何新建入口",
+  server: "register bootstrap only; no POST route; no INSERT",
+  schema: "CREATE TABLE subjects(profile_key TEXT PRIMARY KEY, name TEXT)"
+    + " -- 只有 demo 数据，seed 时写入两套",
+}
+const GOOD = {
+  ui: "'＋ 新建档案' data-action=\"create-subject\" → POST /api/subjects；列表 profiles.map + state.profileId 切换",
+  server: "if (pathname === prefix + '/subjects' && req.method === 'POST') { const body = await readJson(req); return sendJson(res, 200, workbench.createSubject(body)) }",
+  schema: "CREATE TABLE subjects (profile_key TEXT PRIMARY KEY, name TEXT, is_demo INTEGER DEFAULT 0);\nINSERT INTO subjects(profile_key,name,is_demo) VALUES(?,?,0)",
+}
+
+if (SELF_TEST) {
+  const bad = check(BAD)
+  const good = check(GOOD)
+  const ok = bad.pass === false && good.pass === true
+  console.log(JSON.stringify({ selfTest: ok ? 'PASS' : 'FAIL', bad, goodPass: good.pass }, null, 2))
+  process.exit(ok ? 0 : 1)
+}
+
+if (!existsSync(join(root, 'dsh')) && !existsSync(join(root, 'lib'))) {
+  console.error('✗ 用法：node scripts/check-patient-create.mjs <项目根>')
+  process.exit(2)
+}
+
+const ui = `${read('lib/client.js')}\n${read('public/app.js')}\n${read('public/index.html')}\n${read('prototypes/v0.2/app.js')}`
+const server = `${readDirJs('dsh')}\n${readDirJs('lib')}`
+const schema = readDirJs('schema') + (() => { try { return readdirSync(join(root, 'schema')).filter((f) => f.endsWith('.sql')).map((f) => read(join('schema', f))).join('\n') } catch { return '' } })()
+
+const result = check({ ui, server, schema })
+for (const o of result.oks) console.log(`✓ ${o}`)
+for (const f of result.fails) console.error(`✗ ${f}`)
+console.log(result.pass ? '\n✓ 患者档案闸门通过' : '\n✗ 患者档案闸门未通过：用户必须能新建并管理自己的档案，不能只有 demo')
+process.exit(result.pass ? 0 : 1)

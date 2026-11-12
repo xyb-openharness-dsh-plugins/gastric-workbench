@@ -1,3 +1,11 @@
+## 0.1.5 — 2026-11-13
+
+三缺口批量补齐（A 型：临床线与新建患者早已就绪，只缺资料目录入口）：
+
+- **A 资料目录**：面板顶栏新增「配置目录」→ `uiWorkspace.pickDirectory()` → 口径硬拒（主目录本身/桌面/下载根/tmp，客户端+服务端双判）→ `POST /api/gastric/api/root` 落盘回显；`cordis.patch.yml` 补 `config.root: !!js dshHomePath('gastric-workbench')`。
+- 用法说明：本仓客户端是**单文件 lib/client.js**（无 src/ 构建），改动直接落在该文件；版本字面量在 `lib/client.js`、`public/index.html`、`public/app.js` 三处，已同步 0.1.5。
+- 校验：三闸门全绿；`npm run check` 全绿。
+
 ## 0.1.3（2026-11-11，AI 对话面板激活修复）
 
 - 会话判定改用宿主归属 `ownedSession()`（`ownsSession(currentSession())`），不再用 `Boolean(conversation)`（customFrame 下没会话也会传隐藏容器 → 判断恒为真 → 点了没反应）。

@@ -3,7 +3,7 @@
    逐行迁移，除「数据加载方式」外与原型保持一致；改动点逐条列在下边：
    1) 数据默认从 loadBootstrap() 异步拉 GET /api/bootstrap（返回 {version, profiles, subjects,
       entries, trials}），成功后用同一套循环构建 PROFILES / METRICS / EVENTS /
-      DASH_KEYS / DOCS / CANDS / TRIALS，中间结构与原型完全一样。0.1.4 起 demo-data.js
+      DASH_KEYS / DOCS / CANDS / TRIALS，中间结构与原型完全一样。0.1.5 起 demo-data.js
       恢复引入——它是「无 API 形态」的回退数据（scripts/build-public-demo-data.mjs 从
       demo/demo-data.sqlite 生成，对象形状与 bootstrap 一致）。
    2) fetch 失败且存在 window.DEMO_DATA 时回退用它（便于离线比对）；两者都拿不到时在 #main
@@ -18,7 +18,7 @@
    病情整理上传与候选核对、data-countup 数字滚动、prefers-reduced-motion 降级，全部与原型一致。 */
 
 const APP_INFO = {
-  version: '0.1.4',
+  version: '0.1.5',
   build: '2026-10-21',
   channel: 'prototype',
   channelLabel: '交互原型 · 未接入 DSH'
@@ -115,7 +115,7 @@ function loadBootstrap() {
     });
 }
 
-/* ---------------- 写入闭环（0.1.4）：apiPost + 双通道保存 ----------------
+/* ---------------- 写入闭环（0.1.5）：apiPost + 双通道保存 ----------------
    有本机 API（apiBase() 非空——独立启动 ''、宿主 '/api/gastric' 都算有）时先走 POST
    /api/profiles/{key}/{kind}，成功后重拉 bootstrap 并重渲染、toast「已保存到本机数据库」；
    失败回退到调用方的内存分支并提示（禁止静默失败，禁止把演示态写成已保存）。 */
@@ -231,7 +231,7 @@ let AGENT_PANE = { min: 0.25, max: 0.45, def: 0.35, step: 24, presets: { narrow:
 const AGENT_STORE_KEY = 'xyb-gastric-agent-ratio';
 const state = { view: 'dashboard', profile: 'A', agentPhase: 'idle', agentSize: 'std', agentRatio: AGENT_PANE.def, sel: ['wt', 'alb', 'pa'],
   range: 'all', zoom: 100, toggles: { treatment: true, keypoints: true }, pin: null, saved: [], sub: {},
-  /* 写入闭环 / 临床线（0.1.4）：档案管理表单草稿不入 state（读 DOM）；收藏不入库（savedTrials
+  /* 写入闭环 / 临床线（0.1.5）：档案管理表单草稿不入 state（读 DOM）；收藏不入库（savedTrials
      只存本机会话，刷新清空，UI 明示）；trialPref 只影响匹配排序；trialSearch 是检索页条件。 */
   trialPref: { type: 'all' }, trialSearch: { kw: '', type: '全部', region: '全部', status: '全部' }, savedTrials: {},
   query: '', parsing: false, parseError: false, loaded: {}, parsingName: '', lastUpload: null, uploads: 0 };
@@ -1234,7 +1234,7 @@ function openDialog(eyebrow, title, body, foot = '') {
 }
 const closeDialog = () => $('#dialog').close();
 
-/* 档案管理（写入闭环 0.1.4）：demo 与自建档案同列表（演示 / 自建 小标）+ 新建表单。
+/* 档案管理（写入闭环 0.1.5）：demo 与自建档案同列表（演示 / 自建 小标）+ 新建表单。
    有本机 API 时 POST /api/profiles 真建档（成功后自动切换并清空草稿 / 会话态）；
    演示态只提示「演示态，刷新重置」，不假装已保存。 */
 function dlgProfiles() {
@@ -1449,7 +1449,7 @@ document.addEventListener('click', (e) => {
     'export-nutrition': () => toast('就诊展示：最近 10 条进食记录 + 在用补充剂（演示）'),
     'export-review': dlgExport,
     'toggle-ask': (el) => { el.textContent = el.textContent.includes('✓') ? '标记已问' : '已问过 ✓'; },
-    /* 收藏类不落库（0.1.4 明示）：savedTrials 只存本机会话，刷新清空；toast 说清楚。 */
+    /* 收藏类不落库（0.1.5 明示）：savedTrials 只存本机会话，刷新清空；toast 说清楚。 */
     'save-trial': (el) => {
       const id = el.closest('[data-action]').dataset.id ?? el.dataset.id;
       const t = TRIALS.find((x) => x.id === id) || {};
