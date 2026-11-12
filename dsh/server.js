@@ -103,7 +103,38 @@ export function servePublic(req, res, urlPath) {
 }
 
 export function createHandler({ workbench }) {
-  return function handle(req, res) {
+  /* 写入闭环（0.1.4）：服务层从 workbench 实例装配一次；宿主形态（dsh/index.js）用同一批
+     库层函数装配出等价 services，两条启动路径共享同一套写入语义。 */
+  const services = workbench ? {
+    version: workbench.version,
+    capabilities: ['bootstrap', 'health', 'write'],
+    kinds: workbench.kinds,
+    bootstrap: () => workbench.bootstrap(),
+    trialMatch: (kw) => workbench.trialMatch(kw),
+    createProfile: (b) => workbench.createProfile(b),
+    addEntry: (key, kind, b) => workbench.addEntry(key, kind, b),
+    setPrivacy: (b) => workbench.setPrivacy(b.profileKey, b.kind, b.id, b.private),
+  } : null;
+
+  /** 读 JSON body（≤64KB）；超限 413、解析失败 400（可读中文），返回 null 让调用方短路。 */
+  async function readBody(req, res, json) {
+    try {
+      const chunks = [];
+      let size = 0;
+      for await (const c of req) {
+        size += c.length;
+        if (size > 65536) { json(413, { error: 'body_too_large', message: '请求体超过 64KB 上限，请拆小后再试' }); return null; }
+        chunks.push(c);
+      }
+      const text = Buffer.concat(chunks).toString('utf8');
+      return text ? JSON.parse(text) : {};
+    } catch (error) {
+      json(400, { error: 'invalid_json', message: `请求体不是合法 JSON：${error.message}` });
+      return null;
+    }
+  }
+
+  return async function handle(req, res) {
     const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
     const path = url.pathname;
 
@@ -113,18 +144,46 @@ export function createHandler({ workbench }) {
       res.end(buf);
     };
 
-    if (path === '/api/health') return json(200, { ok: true, version: workbench.version });
+    if (path === '/api/health') {
+      return json(200, { ok: true, version: services.version, capabilities: services.capabilities });
+    }
     if (path === '/api/bootstrap') {
       try {
-        return json(200, workbench.bootstrap());
+        return json(200, services.bootstrap());
       } catch (error) {
         return json(500, { error: 'bootstrap_failed', message: error.message });
       }
     }
+    if (path === '/api/trials' && services.trialMatch) {
+      if (req.method !== 'GET') { json(405, { error: 'method_not_allowed', message: '临床试验检索只支持 GET' }); return; }
+      try {
+        return json(200, services.trialMatch(url.searchParams.get('keyword') || ''));
+      } catch (error) {
+        return json(500, { error: 'trials_failed', detail: String(error.message || error) });
+      }
+    }
+    /* ---------- 写入 API（0.1.4）：POST /profiles、POST /profiles/{key}/{kind}、POST /privacy ---------- */
+    const kindRe = (services.kinds || []).join('|');
+    const mEntry = kindRe ? path.match(new RegExp(`^/api/profiles/([A-Za-z0-9_-]+)/(${kindRe})$`)) : null;
+    if (path === '/api/profiles' && req.method === 'POST') {
+      const body = await readBody(req, res, json); if (body === null) return;
+      try { return json(200, services.createProfile(body || {})); }
+      catch (error) { return json(400, { error: 'createProfile_failed', message: String(error.message || error) }); }
+    }
+    if (mEntry && req.method === 'POST') {
+      const body = await readBody(req, res, json); if (body === null) return;
+      try { return json(200, services.addEntry(mEntry[1], mEntry[2], body || {})); }
+      catch (error) { return json(400, { error: 'addEntry_failed', message: String(error.message || error) }); }
+    }
+    if (path === '/api/privacy' && req.method === 'POST') {
+      const body = await readBody(req, res, json); if (body === null) return;
+      try { return json(200, services.setPrivacy(body || {})); }
+      catch (error) { return json(400, { error: 'setPrivacy_failed', message: String(error.message || error) }); }
+    }
     if (path.startsWith('/api/')) return json(404, { error: 'not_found', path });
 
     if (req.method !== 'GET' && req.method !== 'HEAD') {
-      res.writeHead(405, { allow: 'GET, HEAD' });
+      res.writeHead(405, { allow: 'GET, HEAD, POST' });
       return res.end();
     }
 

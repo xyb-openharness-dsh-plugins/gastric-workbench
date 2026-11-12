@@ -24,9 +24,9 @@ test('① migrate 幂等：第二次执行不重跑已应用的迁移', () => {
   const db = openDatabase(':memory:');
   const first = migrate(db);
   const second = migrate(db);
-  assert.equal(first.executed.length, 1, '首次应执行 0001_initial.sql');
+  assert.equal(first.executed.length, 2, '首次应执行 0001_initial.sql + 0003_write_loop.sql');
   assert.deepEqual(second.executed, [], '第二次不应重跑');
-  assert.equal(second.applied.length, 1);
+  assert.equal(second.applied.length, 2);
   close(db);
 });
 

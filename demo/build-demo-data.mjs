@@ -527,7 +527,7 @@ function assemble(P, commonLabs) {
     pathology: P.pathology, activity: P.activity, familyTalk: P.familyTalk };
 }
 
-/* 试验演示行：来自 docs/CLINICAL-DATA-2026.md 记录的本地资料包（236 条真实登记摘录）。
+/* 试验演示行：10 条虚构示例（标题取自 2026 年真实登记方向的中文摘要）。
    标题是登记标题的中文摘要，原文以链接为准；状态为登记状态，不是入组资格。
    覆盖：CLDN18.2 ×3 / HER2 ×1 / 免疫与 MSI ×1 / 围手术期 ×2 / 腹膜与腹腔 ×2 / 预康复 ×1。 */
 const TRIAL_ROWS = [
@@ -541,7 +541,9 @@ const TRIAL_ROWS = [
   ['NCT07855757', '腹膜转移：双抗 + SOX + 腹腔白蛋白紫杉醇', 'NA（未分期）', '进行中未招募', '浙江省肿瘤医院'],
   ['NCT07789184', '胃癌腹膜转移：根治性手术对照非手术', 'Ⅲ期', '招募中', '中国（多中心）'],
   ['NCT07839702', '胃癌患者多模式预康复', 'NA（未分期）', '招募中', '新加坡国立大学医院']
-].map(([id, title, phase, status, sponsor]) => ({ id, title, phase, status, sponsor, url: 'https://clinicaltrials.gov/study/' + id }));
+]  /* fictional:true —— 演示库的 10 条全部是虚构示例（不含可用登记号口径，UI 标注「演示示例」）；
+     真实快照 236 条走 research/gastric-cancer/ 与服务层 /api/trials 透传，两者不混标（§1.2.9）。 */
+  .map(([id, title, phase, status, sponsor]) => ({ id, title, phase, status, sponsor, url: 'https://clinicaltrials.gov/study/' + id, fictional: true }));
 
 const DATA = {
   profiles: { A: assemble(PROFILE_A, commonLabsA), B: assemble(PROFILE_B, commonLabsB) },
@@ -595,7 +597,9 @@ DROP TABLE IF EXISTS viewpoints; DROP TABLE IF EXISTS trials; DROP TABLE IF EXIS
 DROP TABLE IF EXISTS documents; DROP TABLE IF EXISTS candidate_fields; DROP TABLE IF EXISTS pathology_rows;
 /* subjects 的后 9 列与 schema/0001_initial.sql 一致（档案级标量 + 分节标题），
    改这里要同步改 schema，反之亦然——两边是同一套列的镜像。 */
-CREATE TABLE subjects (profile_key TEXT PRIMARY KEY, name TEXT, sex TEXT, age INTEGER, meta TEXT, headline TEXT, stage TEXT, mindset TEXT, dash_keys TEXT, path TEXT, activity TEXT, family_talk TEXT, hp_title TEXT, resection_title TEXT, perioperative_title TEXT, peritoneal_title TEXT, endoscopy_title TEXT, pathology_title TEXT, pathology_status TEXT);
+CREATE TABLE subjects (profile_key TEXT PRIMARY KEY, name TEXT, sex TEXT, age INTEGER, meta TEXT, headline TEXT, stage TEXT, mindset TEXT, dash_keys TEXT, path TEXT, activity TEXT, family_talk TEXT, hp_title TEXT, resection_title TEXT, perioperative_title TEXT, peritoneal_title TEXT, endoscopy_title TEXT, pathology_title TEXT, pathology_status TEXT,
+  /* 这两列由 schema/0003_write_loop.sql 追加；演示档案 is_demo=1（用户自建写 0） */
+  is_demo INTEGER NOT NULL DEFAULT 1, created_on TEXT);
 CREATE TABLE metrics (profile_key TEXT, key TEXT, name TEXT, unit TEXT, cat TEXT, color TEXT, dec INTEGER, kind TEXT, band_low REAL, band_high REAL, note TEXT, PRIMARY KEY(profile_key, key));
 CREATE TABLE metric_points (profile_key TEXT, metric_key TEXT, d TEXT, v_num REAL, v_text TEXT, src TEXT, ord INTEGER, PRIMARY KEY(profile_key, metric_key, d, ord));
 CREATE TABLE molecular (profile_key TEXT, k TEXT, v TEXT, src TEXT, state TEXT, note TEXT, ord INTEGER);
@@ -612,21 +616,37 @@ CREATE TABLE peritoneal_rows (profile_key TEXT, d TEXT, kind TEXT, detail TEXT, 
 CREATE TABLE endoscopy_rows (profile_key TEXT, d TEXT, kind TEXT, finding TEXT, next TEXT, note TEXT, ord INTEGER);
 CREATE TABLE hp_rows (profile_key TEXT, d TEXT, item TEXT, note TEXT, ord INTEGER);
 CREATE TABLE viewpoints (profile_key TEXT, d TEXT, mood TEXT, text TEXT, ord INTEGER);
-CREATE TABLE trials (nct_id TEXT PRIMARY KEY, title TEXT, phase TEXT, status TEXT, sponsor TEXT, url TEXT);
+CREATE TABLE trials (nct_id TEXT PRIMARY KEY, title TEXT, phase TEXT, status TEXT, sponsor TEXT, url TEXT,
+  /* 0003：演示试验条目统一标 fictional=1（虚构示例，UI 标注「演示示例」） */
+  fictional INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE demo_meta (k TEXT PRIMARY KEY, v TEXT);
 CREATE TABLE documents (profile_key TEXT, id TEXT, name TEXT, date TEXT, type TEXT, status TEXT, ord INTEGER, PRIMARY KEY(profile_key, id));
 CREATE TABLE candidate_fields (profile_key TEXT, id TEXT, name TEXT, value TEXT, source TEXT, status TEXT, ord INTEGER, PRIMARY KEY(profile_key, id));
 CREATE TABLE pathology_rows (profile_key TEXT, kind TEXT, a TEXT, b TEXT, ord INTEGER);
+
+/* 0003_write_loop.sql 的两张新表：演示库不播种用户数据，只保证表结构与 schema 一致
+   （镜像逐列比对的口径：表集合与列名一致）。 */
+CREATE TABLE profile_facts (
+  profile_key TEXT NOT NULL, fact_key TEXT NOT NULL, fact_value TEXT, fact_order INTEGER,
+  PRIMARY KEY (profile_key, fact_key)
+);
+CREATE TABLE user_entries (
+  id TEXT PRIMARY KEY, profile_key TEXT, kind TEXT, data TEXT,
+  is_private INTEGER NOT NULL DEFAULT 0, created_on TEXT
+);
+
 CREATE INDEX idx_points ON metric_points(profile_key, metric_key);
+CREATE INDEX idx_user_entries_profile_kind ON user_entries (profile_key, kind);
 `);
 for (const [k, p] of Object.entries(DATA.profiles)) {
   /* 显式列名：subjects 在 0001_initial.sql 里比原型快照多 9 列（档案级标量与分节标题），
-     按位置写会因为列数不匹配直接报错。列名顺序与 schema/0001_initial.sql 一致。 */
+     0003 又追加 is_demo / created_on 两列，按位置写会因为列数不匹配直接报错。
+     列名顺序与 schema/0001_initial.sql + 0003_write_loop.sql 一致。 */
   db.prepare(`INSERT INTO subjects
     (profile_key, name, sex, age, meta, headline, stage, mindset, dash_keys, path,
      activity, family_talk, hp_title, resection_title, perioperative_title, peritoneal_title,
-     endoscopy_title, pathology_title, pathology_status)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+     endoscopy_title, pathology_title, pathology_status, is_demo, created_on)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
     .run(k, p.name, p.sex, p.age, p.meta, p.headline, p.stage, p.mindset,
       JSON.stringify(p.dash_keys), JSON.stringify(p.path),
       p.activity, p.familyTalk,
@@ -635,7 +655,9 @@ for (const [k, p] of Object.entries(DATA.profiles)) {
       p.perioperative ? p.perioperative.title : null,
       p.peritoneal ? p.peritoneal.title : null,
       p.endoscopy ? p.endoscopy.title : null,
-      p.pathology.title, p.pathology.status);
+      p.pathology.title, p.pathology.status,
+      1,                    /* is_demo=1：演示档案（用户自建档案走 createProfile，写 0） */
+      null);                /* created_on：演示数据不标创建日期，避免与真实录入混淆 */
   for (const m of p.metrics) {
     db.prepare('INSERT INTO metrics VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(k, m.key, m.name, m.unit, m.cat, m.color, m.dec, m.dec === null ? (m.kind || 'qual') : 'numeric', m.band ? m.band[0] : null, m.band ? m.band[1] : null, m.note);
     m.points.forEach((pt, i) => db.prepare('INSERT INTO metric_points VALUES (?,?,?,?,?,?,?)').run(k, m.key, pt.d, typeof pt.v === 'number' ? pt.v : null, typeof pt.v === 'number' ? null : pt.v, pt.src, i));
@@ -659,7 +681,7 @@ for (const [k, p] of Object.entries(DATA.profiles)) {
   p.pathology.rows.forEach((r, i) => db.prepare('INSERT INTO pathology_rows VALUES (?,?,?,?,?)').run(k, 'row', r[0], r[1], i));
   p.pathology.gaps.forEach((r, i) => db.prepare('INSERT INTO pathology_rows VALUES (?,?,?,?,?)').run(k, 'gap', r[0], r[1], i));
 }
-DATA.trials.forEach(t => db.prepare('INSERT INTO trials VALUES (?,?,?,?,?,?)').run(t.id, t.title, t.phase, t.status, t.sponsor, t.url));
+DATA.trials.forEach(t => db.prepare('INSERT INTO trials (nct_id, title, phase, status, sponsor, url, fictional) VALUES (?,?,?,?,?,?,?)').run(t.id, t.title, t.phase, t.status, t.sponsor, t.url, 1));
 buildMeta().forEach(([k, v]) => db.prepare('INSERT INTO demo_meta VALUES (?,?)').run(k, v));
 db.close();
 }

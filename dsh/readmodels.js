@@ -105,7 +105,7 @@ function readProfile(db, key) {
 }
 
 export function listSubjects(db) {
-  return rows(db, 'SELECT profile_key, name, meta FROM subjects ORDER BY profile_key');
+  return rows(db, 'SELECT profile_key, name, meta, is_demo, created_on FROM subjects ORDER BY profile_key');
 }
 
 export function getProfile(db, key) {
@@ -116,15 +116,26 @@ export function getProfile(db, key) {
 export function bootstrap(db, { version, build } = {}) {
   const profiles = {};
   for (const s of listSubjects(db)) profiles[s.profile_key] = readProfile(db, s.profile_key);
+  /* fictional 是 0003 加的演示标记：库里存 0/1，读出来还原成布尔（与 demo-data.js 的 true 对齐）。
+     注意：demo-data.js 的 trials 对象是 { id, title, phase, status, sponsor, url, fictional }，
+     这里必须逐键显式构造 —— 直接展开行对象会把多余键带进 parity 断言。 */
   const trials = rows(db, 'SELECT nct_id FROM trials').length
-    ? rows(db, 'SELECT nct_id AS id, title, phase, status, sponsor, url FROM trials ORDER BY rowid')
+    ? rows(db, 'SELECT nct_id AS id, title, phase, status, sponsor, url, fictional FROM trials ORDER BY rowid')
+        .map((r) => ({ id: r.id, title: r.title, phase: r.phase, status: r.status, sponsor: r.sponsor, url: r.url, fictional: !!r.fictional }))
     : [];
   const meta = {};
   for (const r of rows(db, 'SELECT k, v FROM demo_meta')) meta[r.k] = r.v;
+  /* 写入闭环（0003）：档案列表带 is_demo 标记（档案管理弹层区分「演示 / 自建」），
+     用户自记条目按 kind 透传（data 是 JSON 字符串，前端按 kind 解析）。
+     这两项放 payload 顶层，不动 profiles —— profiles 的形状受 parity 断言保护。 */
+  const entries = rows(db, 'SELECT id, profile_key, kind, data, is_private, created_on FROM user_entries ORDER BY rowid')
+    .map((r) => ({ ...r, is_private: !!r.is_private }));
   return {
     version: version ?? null,
     build: build ?? null,
     profiles,
+    subjects: listSubjects(db).map((s) => ({ profile_key: s.profile_key, name: s.name, meta: s.meta, is_demo: !!s.is_demo, created_on: s.created_on ?? null })),
+    entries,
     trials,
     demo_meta: meta,
     /* 宿主未提供原生会话时这里会是 available:false；开发版自带挂载位演示，所以默认 true。

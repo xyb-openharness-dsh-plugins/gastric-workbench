@@ -209,7 +209,17 @@ test('③ public/index.html 含 app.js 用到的全部 DOM id', () => {
   assert.ok(skeletonIds.length >= 16, `静态 id 太少（${skeletonIds.length}），提取逻辑可能失效`);
   assert.ok(html.includes('name="robots"') && html.includes('noindex'), 'index.html 需要 meta robots noindex');
   assert.ok(/<script src="app\.js" defer><\/script>/.test(html), 'app.js 需以普通脚本 + defer 引入');
-  assert.ok(!/<script[^>]*demo-data\.js/.test(html), '开发版不应再引 demo-data.js');
+  /* 0.1.4（§模拟数据回退）：demo-data.js 恢复引入 —— 它是「无 API 形态」的回退数据
+     （scripts/build-public-demo-data.mjs 从 demo/demo-data.sqlite 经读模型 bootstrap() 生成，
+     对象形状与 /api/bootstrap 完全一致），不再是原型时代的写死快照。必须是同步脚本、
+     排在 app.js（defer）之前，loadBootstrap 的回退分支才能读到 window.DEMO_DATA；
+     trial-match.js（匹配纯函数）同样在 app.js 之前。 */
+  const iDemo = html.indexOf('<script src="demo-data.js"></script>');
+  const iMatch = html.indexOf('<script src="trial-match.js"></script>');
+  const iApp = html.indexOf('<script src="app.js" defer></script>');
+  assert.ok(iDemo >= 0, 'index.html 需引入 demo-data.js（无 API 回退数据，build-public-demo-data.mjs 生成）');
+  assert.ok(iMatch >= 0, 'index.html 需引入 trial-match.js（匹配纯函数）');
+  assert.ok(iDemo < iMatch && iMatch < iApp, 'demo-data.js → trial-match.js → app.js 的顺序不能变（同步脚本先于 defer）');
   assert.ok(html.includes('data-size="narrow"') && html.includes('data-size="std"') && html.includes('data-size="wide"'), 'AI 面板窄/标准/宽三档按钮需在骨架里');
 });
 
@@ -408,6 +418,33 @@ test('⑪ 客户端自建面板（customFrame）与分隔线基线', () => {
   assert.match(client, /localStorage\.(getItem|setItem)\(WIDTH_KEY/, '宽度要存 localStorage');
   assert.match(client, /NARROW_BELOW = 760/, '窄屏阈值是 760px');
   assert.match(client, /ResizeObserver/, '窄屏判定要用容器宽度');
+});
+
+/* 0.1.4：public/demo-data.js 与 bootstrap 同形（无 API 形态验证）。
+   它由 scripts/build-public-demo-data.mjs 从 demo/demo-data.sqlite 经读模型 bootstrap()
+   生成 —— 断言它与 prototypes/v0.2/demo-data.js 的 profiles/trials 逐字段一致
+   （store.test ③ 已保证 sqlite 读模型与原型数据一致，所以两条路径必然同形）。 */
+test('⑫ public/demo-data.js 存在且 buildData 可用：无 API 形态的回退数据与 bootstrap 同形', () => {
+  const fallbackSrc = read(path.join(PUBLIC_DIR, 'demo-data.js'));
+  const w = {};
+  (new Function('window', fallbackSrc))(w);
+  const FB = w.DEMO_DATA;
+  assert.ok(FB, 'window.DEMO_DATA 未挂载');
+  assert.deepEqual(Object.keys(FB.profiles).sort(), ['A', 'B'], '回退数据应有 A/B 两档案');
+  assert.deepStrictEqual(FB.profiles.A, DEMO.profiles.A, 'profiles.A 与原型数据逐字段一致');
+  assert.deepStrictEqual(FB.profiles.B, DEMO.profiles.B, 'profiles.B 与原型数据逐字段一致');
+  assert.deepStrictEqual(FB.trials, DEMO.trials, 'trials 与原型数据一致（含 fictional 标记）');
+  assert.ok(FB.subjects && FB.subjects.every((x) => x.is_demo === true), 'subjects 带 is_demo 标记（演示档案）');
+  /* buildData 消费形状校验：手工喂给 buildData 不抛错、候选池已换成回退数据 */
+  installShim({ fetchImpl: async () => { throw new Error('no api'); } });
+  const T = runApp(path.join(PUBLIC_DIR, 'app.js'), EXPORT_LINE_DEV);
+  const D = FB; // 模拟 loadBootstrap 回退分支返回值
+  T.buildData(D);
+  /* TRIALS 是 let 绑定，EXPORT 捕获的是初始快照；改用渲染结果断言候选池已换成回退数据 */
+  T.state.view = 'trials';
+  const html = T.VIEWS.trials();
+  assert.ok(html.includes('已载 10 条'), 'buildData 消费回退数据后候选池 = 10 条（含演示示例标记）');
+  assert.ok(html.includes('演示示例'), '回退候选池的条目带「演示示例」标记');
 });
 
 test.after(() => {
